@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .container.work {
+            background-color: #E25141;
+            color: #FFF0E6;
+        }
+        .container.break {
+            background-color: #4CAF50;
+            color: #E8F5E9;
+        }
+        #timer {
+            font-size: 3rem;
+            margin: 1rem 0;
+        }
+        button, input {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        button {
+            cursor: pointer;
+        }
+        .work button {
+            background-color: #FFF0E6;
+            color: #E25141;
+        }
+        .work button:hover {
+            background-color: #D14131;
+            color: #FFF0E6;
+        }
+        .break button {
+            background-color: #E8F5E9;
+            color: #4CAF50;
+        }
+        .break button:hover {
+            background-color: #45a049;
+            color: #E8F5E9;
+        }
+        input {
+            width: 50px;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        label {
+            font-size: 0.9rem;
+            margin-right: 0.3rem;
+        }
+        .time-input {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+        #sessionCount {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+        }
+        #settingsBtn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        #settingsPanel {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #settingsPanel.show {
+            display: block;
+        }
+        #settingsPanel input, #settingsPanel label {
+            color: #333;
+        }
+        #settingsPanel input {
+            background-color: #f0f0f0;
+        }
+        .duration-input {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+        }
+        .duration-input label {
+            margin-right: 0.5rem;
+        }
+        .duration-input input {
+            width: 40px;
+            margin: 0 0.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container work">
+        <h1>Pomodoro Timer</h1>
+        <div id="timer">25:00</div>
+        <button id="startBtn">Start</button>
+        <button id="resetBtn">Reset</button>
+        <div id="sessionCount">Pomodoros: 0 / 8</div>
+    </div>
+    <button id="settingsBtn">⚙️</button>
+    <div id="settingsPanel">
+        <div class="duration-input">
+            <label>Work duration:</label>
+            <div>
+                <input type="number" id="workMinutes" min="1" max="59" value="25">
+                <label for="workMinutes">m</label>
+                <input type="number" id="workSeconds" min="0" max="59" value="0">
+                <label for="workSeconds">s</label>
+            </div>
+        </div>
+        <div class="duration-input">
+            <label>Break duration:</label>
+            <div>
+                <input type="number" id="breakMinutes" min="1" max="59" value="5">
+                <label for="breakMinutes">m</label>
+                <input type="number" id="breakSeconds" min="0" max="59" value="0">
+                <label for="breakSeconds">s</label>
+            </div>
+        </div>
+        <div class="time-input">
+            <label for="totalPomodoros">Total Pomodoros:</label>
+            <input type="number" id="totalPomodoros" min="1" max="20" value="8">
+        </div>
+    </div>
+
+    <script>
+        let timer;
+        let timeLeft = 1500; // Default: 25 minutes in seconds
+        let isWorking = true;
+        let sessionsCompleted = 0;
+        let totalPomodoros = 8;
+
+        const container = document.querySelector('.container');
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const workMinutesInput = document.getElementById('workMinutes');
+        const workSecondsInput = document.getElementById('workSeconds');
+        const breakMinutesInput = document.getElementById('breakMinutes');
+        const breakSecondsInput = document.getElementById('breakSeconds');
+        const totalPomodorosInput = document.getElementById('totalPomodoros');
+        const sessionCountDisplay = document.getElementById('sessionCount');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            sessionCountDisplay.textContent = `Pomodoros: ${sessionsCompleted} / ${totalPomodoros}`;
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft === 0) {
+                    clearInterval(timer);
+                    if (isWorking) {
+                        sessionsCompleted++;
+                        if (sessionsCompleted < totalPomodoros) {
+                            prepareBreak();
+                        } else {
+                            alert(`You've completed ${totalPomodoros} Pomodoros. Great job! Take a longer break.`);
+                            resetTimer();
+                        }
+                    } else {
+                        prepareWork();
+                    }
+                    updateDisplay();
+                }
+            }, 1000);
+            startBtn.textContent = 'Pause';
+            startBtn.removeEventListener('click', startTimer);
+            startBtn.addEventListener('click', pauseTimer);
+        }
+
+        function pauseTimer() {
+            clearInterval(timer);
+            startBtn.textContent = 'Resume';
+            startBtn.removeEventListener('click', pauseTimer);
+            startBtn.addEventListener('click', startTimer);
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            sessionsCompleted = 0;
+            prepareWork();
+        }
+
+        function prepareBreak() {
+            isWorking = false;
+            container.classList.remove('work');
+            container.classList.add('break');
+            timeLeft = parseInt(breakMinutesInput.value) * 60 + parseInt(breakSecondsInput.value);
+            updateDisplay();
+            startBtn.textContent = 'Start Break';
+            startBtn.removeEventListener('click', pauseTimer);
+            startBtn.addEventListener('click', startTimer);
+        }
+
+        function prepareWork() {
+            isWorking = true;
+            container.classList.remove('break');
+            container.classList.add('work');
+            timeLeft = parseInt(workMinutesInput.value) * 60 + parseInt(workSecondsInput.value);
+            updateDisplay();
+            startBtn.textContent = 'Start Work';
+            startBtn.removeEventListener('click', pauseTimer);
+            startBtn.addEventListener('click', startTimer);
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        // Update timer when inputs change
+        [workMinutesInput, workSecondsInput, breakMinutesInput, breakSecondsInput].forEach(input => {
+            input.addEventListener('change', function() {
+                if (!timer) {
+                    if (isWorking) {
+                        prepareWork();
+                    } else {
+                        prepareBreak();
+                    }
+                }
+            });
+        });
+
+        totalPomodorosInput.addEventListener('change', function() {
+            totalPomodoros = parseInt(this.value);
+            updateDisplay();
+        });
+
+        // Toggle settings panel
+        settingsBtn.addEventListener('click', function() {
+            settingsPanel.classList.toggle('show');
+        });
+
+        // Close settings panel when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!settingsPanel.contains(event.target) && event.target !== settingsBtn) {
+                settingsPanel.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
